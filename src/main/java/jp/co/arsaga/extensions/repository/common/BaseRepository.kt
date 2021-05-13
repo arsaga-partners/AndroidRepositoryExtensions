@@ -8,14 +8,34 @@ interface BaseRepository<Store, Req> {
     fun refresh()
     fun fetch(request: Req?)
     fun isNeedUpdate(): Boolean = true
+
+    abstract class Impl<Res, Store, Req>(initRequest: Req?) : BaseRepository<Store, Req> {
+
+        private var latestRequestCache: Req? = initRequest
+
+        override fun refresh() {
+            dispatch(latestRequestCache)
+        }
+
+        override fun fetch(request: Req?) {
+            latestRequestCache = requestCacheFactory(request)
+            dispatch(request)
+        }
+
+        protected open fun requestCacheFactory(request: Req?) = request
+
+        protected abstract fun dataPush(response: Res?)
+
+        protected abstract fun dispatch(request: Req?)
+    }
 }
 
 typealias BaseLiveDataRepository<T> = BaseRequestLiveDataRepository<T, Any?>
 
 abstract class BaseRequestLiveDataRepository<T, Req>(initRequest: Req?) :
-    BaseRepository<LiveData<T?>, Req> {
+    BaseRepository.Impl<T, LiveData<T?>, Req>(initRequest) {
 
-    protected val _dataSource by lazy {
+    private val _dataSource by lazy {
         object : MutableLiveData<T?>(null) {
             override fun onActive() {
                 super.onActive()
@@ -26,17 +46,7 @@ abstract class BaseRequestLiveDataRepository<T, Req>(initRequest: Req?) :
 
     override val dataSource: LiveData<T?> = _dataSource
 
-    private var latestRequestCache: Req? = initRequest
-
-    override fun refresh() {
-        fetch(latestRequestCache)
+    override fun dataPush(response: T?) {
+        _dataSource.postValue(response)
     }
-
-    override fun fetch(request: Req?) {
-        latestRequestCache = request
-        dispatch(request)
-    }
-
-    protected abstract fun dispatch(request: Req?)
-
 }
