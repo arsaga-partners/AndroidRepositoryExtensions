@@ -43,10 +43,12 @@ data class ValidInputEntity<T>(
 data class ComplexValidInputEntity<T>(
     val inputValueReference: () -> T,
     val sideEffect: (T, ComplexValidInputEntity<T>) -> Unit,
+    private val updateNotifier: Boolean = true,
     override val isButtonEnabled: Boolean = false,
     override val validator: (T) -> Boolean
 ) : AbstractValidInputEntity<T> {
     fun update(newValue: T) = copy(
+        updateNotifier = !updateNotifier,
         isButtonEnabled = validator(newValue)
     ).also {
         sideEffect(newValue, it)
