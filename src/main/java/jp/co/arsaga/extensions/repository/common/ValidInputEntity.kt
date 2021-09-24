@@ -23,8 +23,18 @@ data class ValidInputEntity<T>(
      * JetpackCompose内からviewModelやuseCase内の状態を変更する関数
      * IO待ちなどの重い処理は別スレッドでするようにしてください
      *
-     * @param newValue 値が更新された型を入れる
+     * @param updater 値を変換する
      */
+    fun update(updater: (T) -> T) = updater(inputValues).let { newValue ->
+        copy(
+            inputValues = newValue,
+            isButtonEnabled = validator(newValue)
+        ).also {
+            sideEffect(it)
+        }
+    }
+
+    @Deprecated("ラムダの方で処理してください")
     fun update(newValue: T) = copy(
         inputValues = newValue,
         isButtonEnabled = validator(newValue)
@@ -47,6 +57,17 @@ data class ComplexValidInputEntity<T>(
     override val isButtonEnabled: Boolean = false,
     override val validator: (T) -> Boolean
 ) : AbstractValidInputEntity<T> {
+    fun update(updater: (T) -> T) = inputValueReference()
+        .let(updater).let { newValue ->
+            copy(
+                updateNotifier = !updateNotifier,
+                isButtonEnabled = validator(newValue)
+            ).also {
+                sideEffect(newValue, it)
+            }
+        }
+
+    @Deprecated("ラムダの方で処理してください")
     fun update(newValue: T) = copy(
         updateNotifier = !updateNotifier,
         isButtonEnabled = validator(newValue)
