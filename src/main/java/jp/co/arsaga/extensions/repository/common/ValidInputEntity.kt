@@ -25,21 +25,13 @@ data class ValidInputEntity<T>(
      *
      * @param updater 値を変換する
      */
-    fun update(updater: (T) -> T) = updater(inputValues).let { newValue ->
+    fun update(updater: T.() -> T) = updater(inputValues).let { newValue ->
         copy(
             inputValues = newValue,
             isButtonEnabled = validator(newValue)
         ).also {
             sideEffect(it)
         }
-    }
-
-    @Deprecated("ラムダの方で処理してください")
-    fun update(newValue: T) = copy(
-        inputValues = newValue,
-        isButtonEnabled = validator(newValue)
-    ).also {
-        sideEffect(it)
     }
 }
 
@@ -57,7 +49,7 @@ data class ComplexValidInputEntity<T>(
     override val isButtonEnabled: Boolean = false,
     override val validator: (T) -> Boolean
 ) : AbstractValidInputEntity<T> {
-    fun update(updater: (T) -> T) = inputValueReference()
+    fun update(updater: T.() -> T) = inputValueReference()
         .let(updater).let { newValue ->
             copy(
                 updateNotifier = !updateNotifier,
@@ -66,14 +58,6 @@ data class ComplexValidInputEntity<T>(
                 sideEffect(newValue, it)
             }
         }
-
-    @Deprecated("ラムダの方で処理してください")
-    fun update(newValue: T) = copy(
-        updateNotifier = !updateNotifier,
-        isButtonEnabled = validator(newValue)
-    ).also {
-        sideEffect(newValue, it)
-    }
 }
 
 /**
