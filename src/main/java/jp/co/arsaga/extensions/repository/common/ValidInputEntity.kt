@@ -18,19 +18,22 @@ data class ValidInputEntity<T>(
     val sideEffect: (ValidInputEntity<T>) -> Unit = {},
     override val isButtonEnabled: Boolean = false,
     override val validator: (T) -> Boolean
-) : AbstractValidInputEntity<T> {
+) : ValidInputEntityInterface<T> {
+    override val inputValueReference: () -> T = { inputValues }
     /**
      * JetpackCompose内からviewModelやuseCase内の状態を変更する関数
      * IO待ちなどの重い処理は別スレッドでするようにしてください
      *
      * @param updater 値を変換する
      */
-    fun update(updater: T.() -> T) = updater(inputValues).let { newValue ->
-        copy(
-            inputValues = newValue,
-            isButtonEnabled = validator(newValue)
-        ).also {
-            sideEffect(it)
+    override fun update(updater: T.() -> T) {
+        updater(inputValues).let { newValue ->
+            copy(
+                inputValues = newValue,
+                isButtonEnabled = validator(newValue)
+            ).also {
+                sideEffect(it)
+            }
         }
     }
 }
@@ -43,28 +46,32 @@ data class ValidInputEntity<T>(
  * @constructor sideEffect リクエスト型を置いている別のプロパティを更新する関数
  */
 data class ComplexValidInputEntity<T>(
-    val inputValueReference: () -> T,
+    override val inputValueReference: () -> T,
     val sideEffect: (T, ComplexValidInputEntity<T>) -> Unit,
     private val updateNotifier: Boolean = true,
     override val isButtonEnabled: Boolean = false,
     override val validator: (T) -> Boolean
-) : AbstractValidInputEntity<T> {
-    fun update(updater: T.() -> T) = inputValueReference()
-        .let(updater).let { newValue ->
-            copy(
-                updateNotifier = !updateNotifier,
-                isButtonEnabled = validator(newValue)
-            ).also {
-                sideEffect(newValue, it)
+) : ValidInputEntityInterface<T> {
+    override fun update(updater: T.() -> T) {
+        inputValueReference()
+            .let(updater).let { newValue ->
+                copy(
+                    updateNotifier = !updateNotifier,
+                    isButtonEnabled = validator(newValue)
+                ).also {
+                    sideEffect(newValue, it)
+                }
             }
-        }
+    }
 }
 
 /**
  * @constructor isButtonEnabled バリデーションの結果ボタンを有効/無効の値
  * @constructor validator newValueに基づいてisButtonEnabledを判定するロジック
  */
-sealed interface AbstractValidInputEntity<T> {
+sealed interface ValidInputEntityInterface<T> {
     val isButtonEnabled: Boolean
     val validator: (T) -> Boolean
+    val inputValueReference: () -> T
+    fun update(updater: T.() -> T)
 }
