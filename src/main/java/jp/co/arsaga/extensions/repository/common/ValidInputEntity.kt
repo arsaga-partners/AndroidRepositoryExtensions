@@ -1,5 +1,9 @@
 package jp.co.arsaga.extensions.repository.common
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlin.reflect.KMutableProperty0
+
 /**
  * JetpackComposeにおいてフォームバリデーションを抽象化した型クラス
  */
@@ -36,6 +40,17 @@ data class ValidInputEntity<T>(
             }
         }
     }
+
+    data class Factory<T>(
+        private val factory: ((ValidInputEntity<T>) -> Unit) -> ValidInputEntity<T>
+    ) {
+        private val _state = MutableStateFlow(factory(::updater))
+        val state: StateFlow<ValidInputEntityInterface<T>> = _state
+
+        private fun updater(validInputEntity: ValidInputEntity<T>) {
+            _state.value = validInputEntity
+        }
+    }
 }
 
 /**
@@ -62,6 +77,19 @@ data class ComplexValidInputEntity<T>(
                     sideEffect(newValue, it)
                 }
             }
+    }
+
+    data class Factory<T>(
+        private val reflection: KMutableProperty0<T>,
+        private val factory: ((T, ComplexValidInputEntity<T>) -> Unit) -> ComplexValidInputEntity<T>
+    ) {
+        private val _state = MutableStateFlow(factory(::updater))
+        val state: StateFlow<ValidInputEntityInterface<T>> = _state
+
+        private fun updater(newValue: T,complexValidInputEntity: ComplexValidInputEntity<T>) {
+            reflection.set(newValue)
+            _state.value = complexValidInputEntity
+        }
     }
 }
 
