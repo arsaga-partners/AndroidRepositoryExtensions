@@ -4,25 +4,18 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 interface BaseRepository<Store, Req> {
     val dataSource: Store
+    val requestQuery: (() -> Req)?
     fun refresh()
     fun fetch(request: Req?)
     fun isNeedUpdate(): Boolean = true
 
-    abstract class Impl<Res, Store, Req>(initRequest: Req?) : BaseRepository<Store, Req> {
-
-        internal var latestRequestCache: Req? = initRequest
-            private set
-
-        override fun refresh() {
-            dispatch(latestRequestCache)
-        }
+    abstract class Impl<Res, Store, Req>(
+        override val requestQuery: (() -> Req)?
+    ) : BaseRepository<Store, Req> {
 
         override fun fetch(request: Req?) {
-            latestRequestCache = requestCacheFactory(request)
             dispatch(request)
         }
-
-        protected open fun requestCacheFactory(request: Req?) = request
 
         protected abstract fun dataPush(response: Res?)
 
@@ -41,8 +34,13 @@ interface BasePagingRepository<Store, Req> : BaseRepository<Store, Req> {
     fun isTerminal(): Boolean
 
     abstract class Impl<Res, Store, Req, Content>(
-        initRequest: Req?
-    ) : BaseRepository.Impl<Res, Store, Req>(initRequest), BasePagingRepository<Store, Req> {
+        override val requestQuery: (() -> Req)?
+    ) : BaseRepository.Impl<Res, Store, Req>(requestQuery), BasePagingRepository<Store, Req> {
+
+        protected var latestRequestCache: Req? = requestQuery?.invoke()
+            private set
+
+        protected open fun requestCacheFactory(request: Req?) = request
 
         abstract fun limitEntityCount(): Int
 
@@ -56,6 +54,7 @@ interface BasePagingRepository<Store, Req> : BaseRepository<Store, Req> {
 
         override fun fetch(request: Req?) {
             if (!isTerminal() && isBusy.compareAndSet(false, true)) {
+                latestRequestCache = requestCacheFactory(request)
                 super.fetch(request)
             }
         }
