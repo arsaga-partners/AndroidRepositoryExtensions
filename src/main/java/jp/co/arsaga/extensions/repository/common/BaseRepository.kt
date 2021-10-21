@@ -42,8 +42,6 @@ interface BasePagingRepository<Store, Req> : BaseRepository<Store, Req> {
 
         protected open fun requestCacheFactory(request: Req?) = request
 
-        abstract fun limitEntityCount(): Int
-
         abstract fun currentList(): Collection<Content>
 
         abstract fun combineList(currentList: Collection<Content>, response: Res): Res
@@ -60,7 +58,8 @@ interface BasePagingRepository<Store, Req> : BaseRepository<Store, Req> {
         }
 
         override fun fetchNextPage() {
-            nextRequestFactory(currentList().size.plus(1), latestRequestCache)
+            (latestRequestCache ?: requestQuery?.invoke())
+                .run { nextRequestFactory(currentList().size.plus(1), this) }
                 ?.run(::fetch)
         }
 
