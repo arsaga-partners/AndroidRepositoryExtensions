@@ -24,6 +24,7 @@ data class ValidInputEntity<T>(
     override val validator: (T) -> Boolean
 ) : ValidInputEntityInterface<T> {
     override val inputValueReference: () -> T = { inputValues }
+
     /**
      * JetpackCompose内からviewModelやuseCase内の状態を変更する関数
      * IO待ちなどの重い処理は別スレッドでするようにしてください
@@ -86,7 +87,7 @@ data class ComplexValidInputEntity<T>(
         private val _state = MutableStateFlow(factory(::updater))
         val state: StateFlow<ValidInputEntityInterface<T>> = _state
 
-        private fun updater(newValue: T,complexValidInputEntity: ComplexValidInputEntity<T>) {
+        private fun updater(newValue: T, complexValidInputEntity: ComplexValidInputEntity<T>) {
             reflection.set(newValue)
             _state.value = complexValidInputEntity
         }
@@ -97,9 +98,37 @@ data class ComplexValidInputEntity<T>(
  * @constructor isButtonEnabled バリデーションの結果ボタンを有効/無効の値
  * @constructor validator newValueに基づいてisButtonEnabledを判定するロジック
  */
-sealed interface ValidInputEntityInterface<T> {
+sealed interface ValidInputEntityInterface<T> : InputEntityInterface<T> {
     val isButtonEnabled: Boolean
     val validator: (T) -> Boolean
+}
+
+data class InputEntity<T> internal constructor(
+    private val inputValues: T,
+    private val sideEffect: (InputEntity<T>) -> Unit = {}
+) : InputEntityInterface<T> {
+    override val inputValueReference: () -> T = { inputValues }
+    override fun update(updater: T.() -> T) {
+        updater(inputValues).let { newValue ->
+            copy(
+                inputValues = newValue
+            ).also {
+                sideEffect(it)
+            }
+        }
+    }
+
+    data class Factory<T>(private val initValue: T) {
+        private val _state = MutableStateFlow(InputEntity(initValue, (::updater)))
+        val state: StateFlow<InputEntityInterface<T>> = _state
+
+        private fun updater(inputEntity: InputEntity<T>) {
+            _state.value = inputEntity
+        }
+    }
+}
+
+interface InputEntityInterface<T> {
     val inputValueReference: () -> T
     fun update(updater: T.() -> T)
 }
