@@ -33,6 +33,8 @@ interface BasePagingRepository<Store, Req> : BaseRepository<Store, Req> {
 
     fun isTerminal(): Boolean
 
+    fun clearStatus()
+
     abstract class Impl<Res, Store, Req, Content>(
         override val requestQuery: (() -> Req)?
     ) : BaseRepository.Impl<Res, Store, Req>(requestQuery), BasePagingRepository<Store, Req> {
