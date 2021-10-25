@@ -42,7 +42,7 @@ data class ValidInputEntity<T>(
         }
     }
 
-    data class Factory<T>(
+    data class Factory<T> constructor(
         private val factory: ((ValidInputEntity<T>) -> Unit) -> ValidInputEntity<T>
     ) {
         private val _state = MutableStateFlow(factory(::updater))
@@ -50,6 +50,20 @@ data class ValidInputEntity<T>(
 
         private fun updater(validInputEntity: ValidInputEntity<T>) {
             _state.value = validInputEntity
+        }
+
+        companion object {
+            @Deprecated(
+                "Factoryのconstructorで完結させたい(リファクタ予定)"
+            )
+            fun <T> create(
+                inputValues: T,
+                validator: (T) -> Boolean
+            ): Factory<T> = Factory {
+                ValidInputEntity(inputValues, it) { entity ->
+                    validator(entity)
+                }
+            }
         }
     }
 }
@@ -61,7 +75,7 @@ data class ValidInputEntity<T>(
  *
  * @constructor sideEffect リクエスト型を置いている別のプロパティを更新する関数
  */
-data class ComplexValidInputEntity<T>(
+data class ComplexValidInputEntity<T> constructor(
     override val inputValueReference: () -> T,
     val sideEffect: (T, ComplexValidInputEntity<T>) -> Unit,
     private val updateNotifier: Boolean = true,
@@ -80,7 +94,7 @@ data class ComplexValidInputEntity<T>(
             }
     }
 
-    data class Factory<T>(
+    data class Factory<T> constructor(
         private val reflection: KMutableProperty0<T>,
         private val factory: ((T, ComplexValidInputEntity<T>) -> Unit) -> ComplexValidInputEntity<T>
     ) {
@@ -90,6 +104,20 @@ data class ComplexValidInputEntity<T>(
         private fun updater(newValue: T, complexValidInputEntity: ComplexValidInputEntity<T>) {
             reflection.set(newValue)
             _state.value = complexValidInputEntity
+        }
+
+        companion object {
+            @Deprecated(
+                "Factoryのconstructorで完結させたい(リファクタ予定)"
+            )
+            fun <T> create(
+                reflection: KMutableProperty0<T>,
+                validator: (T) -> Boolean
+            ): Factory<T> = Factory(reflection) {
+                ComplexValidInputEntity({ reflection.get() }, it) { entity ->
+                    validator(entity)
+                }
+            }
         }
     }
 }
