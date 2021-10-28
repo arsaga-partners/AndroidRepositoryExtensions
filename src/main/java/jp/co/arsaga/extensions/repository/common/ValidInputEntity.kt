@@ -17,7 +17,9 @@ import kotlin.reflect.KMutableProperty0
  * ValidInputEntityを保持しているプロパティを更新する(もしくは更新不可でガードする)関数への参照が基本だが、
  * 値が更新されるついでに何か(リアクションやカウントアップ等)する処理を置く場所
  */
-data class ValidInputEntity<T>(
+data class ValidInputEntity<T>
+@Deprecated("Factoryクラスで生成してください")
+constructor(
     val inputValues: T,
     val sideEffect: (ValidInputEntity<T>) -> Unit = {},
     override val isButtonEnabled: Boolean = false,
@@ -42,28 +44,19 @@ data class ValidInputEntity<T>(
         }
     }
 
-    data class Factory<T> constructor(
-        private val factory: ((ValidInputEntity<T>) -> Unit) -> ValidInputEntity<T>
+    data class Factory<T>(
+        private val inputValues: T,
+        private val validator: (T) -> Boolean
     ) {
-        private val _state = MutableStateFlow(factory(::updater))
+        private val _state = MutableStateFlow(
+            ValidInputEntity(inputValues, ::updater) { entity ->
+                validator(entity)
+            }
+        )
         val state: StateFlow<ValidInputEntityInterface<T>> = _state
 
         private fun updater(validInputEntity: ValidInputEntity<T>) {
             _state.value = validInputEntity
-        }
-
-        companion object {
-            @Deprecated(
-                "Factoryのconstructorで完結させたい(リファクタ予定)"
-            )
-            fun <T> create(
-                inputValues: T,
-                validator: (T) -> Boolean
-            ): Factory<T> = Factory {
-                ValidInputEntity(inputValues, it) { entity ->
-                    validator(entity)
-                }
-            }
         }
     }
 }
@@ -75,7 +68,9 @@ data class ValidInputEntity<T>(
  *
  * @constructor sideEffect リクエスト型を置いている別のプロパティを更新する関数
  */
-data class ComplexValidInputEntity<T> constructor(
+data class ComplexValidInputEntity<T>
+@Deprecated("Factoryクラスで生成してください")
+constructor(
     override val inputValueReference: () -> T,
     val sideEffect: (T, ComplexValidInputEntity<T>) -> Unit,
     private val updateNotifier: Boolean = true,
@@ -96,28 +91,18 @@ data class ComplexValidInputEntity<T> constructor(
 
     data class Factory<T> constructor(
         private val reflection: KMutableProperty0<T>,
-        private val factory: ((T, ComplexValidInputEntity<T>) -> Unit) -> ComplexValidInputEntity<T>
+        private val validator: (T) -> Boolean
     ) {
-        private val _state = MutableStateFlow(factory(::updater))
+        private val _state = MutableStateFlow(
+            ComplexValidInputEntity({ reflection.get() }, ::updater) {
+                validator(it)
+            }
+        )
         val state: StateFlow<ValidInputEntityInterface<T>> = _state
 
         private fun updater(newValue: T, complexValidInputEntity: ComplexValidInputEntity<T>) {
             reflection.set(newValue)
             _state.value = complexValidInputEntity
-        }
-
-        companion object {
-            @Deprecated(
-                "Factoryのconstructorで完結させたい(リファクタ予定)"
-            )
-            fun <T> create(
-                reflection: KMutableProperty0<T>,
-                validator: (T) -> Boolean
-            ): Factory<T> = Factory(reflection) {
-                ComplexValidInputEntity({ reflection.get() }, it) { entity ->
-                    validator(entity)
-                }
-            }
         }
     }
 }
