@@ -21,11 +21,11 @@ data class IOActionEntity<T>(val result: UiState<T>?, val send: () -> Unit) {
     class Factory<T>(
         private val sendFactory: ((UiState<T>) -> Unit) -> Unit
     ) {
-        private val _status = MutableStateFlow(IOActionEntity<T>(null, ::sendAction))
-        val status: StateFlow<IOActionEntity<T>> = _status
+        private val _state = MutableStateFlow(IOActionEntity<T>(null, ::sendAction))
+        val state: StateFlow<IOActionEntity<T>> = _state
         private fun sendAction() {
             sendFactory { res ->
-                _status.update { it.copy(result = res) }
+                _state.update { it.copy(result = res) }
             }
         }
     }
