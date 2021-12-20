@@ -6,9 +6,9 @@ package jp.co.arsaga.extensions.repository.common
  * 主にGET系の処理でRepositoryとセットで使う
  */
 data class UiState<T>(
+    val data: T? = null,
     val loading: Boolean = false,
     val exception: Exception? = null,
-    val data: T? = null
 ) {
     /**
      * エラーかどうか
@@ -21,6 +21,12 @@ data class UiState<T>(
      */
     val initialLoad: Boolean
         get() = data == null && loading && !hasError
+
+    fun <N>convert(newTypeData: N): UiState<N> = UiState(
+        data = newTypeData,
+        loading = loading,
+        exception = exception
+    )
 }
 
 /**
