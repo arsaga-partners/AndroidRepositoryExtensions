@@ -26,5 +26,5 @@ interface BaseAnalyticsFragment<T : Enum<T>> {
 }
 
 interface BaseAnalyticsAction<T : Enum<T>> {
-    val analyticsAction: (BaseAnalyticsDataFactory<T>) -> Unit
+    val analyticsAction: (List<BaseAnalyticsDataFactory<T>>) -> Unit
 }
